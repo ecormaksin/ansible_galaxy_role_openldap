@@ -1,3 +1,37 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # tasks file for ansible_galaxy_role_openldap
+
+- name: "OpenLDAP | Download source code"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.get_url:
+    url: https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-2.6.10.tgz
+    dest: /usr/local/src
+
+- name: "OpenLDAP | Download signature file"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.get_url:
+    url: https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-2.6.10.tgz.asc
+    dest: /tmp
+
+- name: "OpenLDAP | Verify source code by GPG"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.command: gpg --verify /tmp/openldap-2.6.10.tgz.asc /usr/local/src/openldap-2.6.10.tgz
+  register: openldap_gpg_verify
+
+- name: "OpenLDAP | Succeeded to verify"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.debug:
+    msg: "GPG検証が成功しました。"
+  when: openldap_gpg_verify.rc == 0
+
+- name: "OpenLDAP | Failed to verify"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.debug:
+    msg: "GPG検証が失敗しました。"
+  when: openldap_gpg_verify.rc != 0
