@@ -2,6 +2,34 @@
 ---
 # tasks file for ansible_galaxy_role_openldap
 
+- name: "OpenLDAP | Install GPG package"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  apt:
+    pkg:
+      - gpg
+    state: present
+    update_cache: yes
+
+- name: "OpenLDAP | Download GPG Signature file"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.get_url:
+    url: https://www.openldap.org/software/download/OpenLDAP/gpg-pubkey.txt
+    dest: /tmp/7F67D5FD1CE1CBCE
+
+- name: "OpenLDAP | Import and trust GPG public key"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.shell:
+    cmd: |
+      gpg --import "/tmp/7F67D5FD1CE1CBCE"
+      echo "$( \
+        gpg --list-keys \
+        | grep "7F67D5FD1CE1CBCE" | tail -1 \
+        | tr -d '[:space:]' \
+      ):6:" | gpg --import-ownertrust
+
 - name: "OpenLDAP | Download source code"
   become: true
   ignore_errors: "{{ ansible_check_mode }}"
@@ -35,3 +63,30 @@
   ansible.builtin.debug:
     msg: "GPG検証が失敗しました。"
   when: openldap_gpg_verify.rc != 0
+
+- name: "OpenLDAP | Unpack source code"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  unarchive:
+    remote_src: yes
+    src: /usr/local/src/openldap-2.6.10.tgz
+    dest: /usr/local/src
+
+- name: "OpenLDAP | Install required packeges for build"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.apt:
+    name:
+      - build-essential
+    state: present
+
+- name: "OpenLDAP | Build source code"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.shell:
+    cmd: |
+      ./configure && \
+      make depend && \
+      make && \
+      make install
+    chdir: /usr/local/src/openldap-2.6.10
