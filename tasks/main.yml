@@ -2,6 +2,8 @@
 ---
 # tasks file for ansible_galaxy_role_openldap
 
+# https://www.openldap.org/doc/admin26/quickstart.html
+
 - name: "OpenLDAP | Install GPG package"
   become: true
   ignore_errors: "{{ ansible_check_mode }}"
@@ -90,3 +92,38 @@
       make && \
       make install
     chdir: /usr/local/src/openldap-2.6.10
+
+- name: "OpenLDAP | Edit the configuration file"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.replace:
+    path: /usr/local/etc/openldap/slapd.ldif
+    regexp: "dc=my-domain,dc=com"
+    replace: "{{ openldap.domain_component.full }}"
+
+- name: "OpenLDAP | Create directories"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "700"
+  with_items:
+    - /usr/local/etc/slapd.d
+    - /usr/local/var/openldap-data
+
+- name: "OpenLDAP | Import the configuration database"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.shell:
+    cmd: |
+      /usr/local/sbin/slapadd -n 0 -F /usr/local/etc/slapd.d -l /usr/local/etc/openldap/slapd.ldif
+
+- name: "OpenLDAP | Start SLAPD"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.shell:
+    cmd: |
+      /usr/local/libexec/slapd -F /usr/local/etc/slapd.d
