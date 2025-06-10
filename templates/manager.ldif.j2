@@ -1,0 +1,9 @@
+dn: {{ openldap.domain_component.full }}
+objectclass: dcObject
+objectclass: organization
+o: {{ openldap.organization.name }}
+dc: {{ openldap.domain_component.sld_value_only }}
+
+dn: cn=Manager,{{ openldap.domain_component.full }}
+objectclass: organizationalRole
+cn: Manager

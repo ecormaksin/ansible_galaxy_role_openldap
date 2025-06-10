@@ -113,6 +113,7 @@
   with_items:
     - /usr/local/etc/slapd.d
     - /usr/local/var/openldap-data
+    - /opt/openldap/privileged
 
 - name: "OpenLDAP | Import the configuration database"
   become: true
@@ -127,3 +128,22 @@
   ansible.builtin.shell:
     cmd: |
       /usr/local/libexec/slapd -F /usr/local/etc/slapd.d
+
+- name: "OpenLDAP | Set up a ldif file for Manager entry"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.template:
+    src: manager.ldif.j2
+    dest: /opt/openldap/privileged/manager.ldif
+    owner: root
+    group: root
+    mode: "700"
+
+- name: "OpenLDAP | Add Manager entry to directory"
+  become: true
+  ignore_errors: "{{ ansible_check_mode }}"
+  ansible.builtin.shell:
+    cmd: |
+      ldapadd -x -D "cn=Manager,{{ openldap.domain_component.full }}" -W -f /opt/openldap/privileged/manager.ldif
+  tags:
+    - oneshot
